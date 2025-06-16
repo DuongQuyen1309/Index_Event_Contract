@@ -13,7 +13,7 @@ func GetTotalTurnAmountOfUser(c *gin.Context) {
 	userAddress := c.Param("address")
 	amountSum, err := datastore.GetTotalTurnAmountOfUser(userAddress, c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user address"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"amount": amountSum, "address": userAddress})
@@ -23,12 +23,12 @@ func GetTurnsRequestsOfUser(c *gin.Context) {
 	userAddress := c.Param("address")
 	page, err := strconv.Atoi(c.Query("page"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page parameter"})
 		return
 	}
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit parameter"})
 		return
 	}
 	if page <= 0 || limit <= 0 {
@@ -59,12 +59,12 @@ func GetPrizesOfHash(c *gin.Context) {
 	var requestId string
 	requestId, err := datastore.GetRequestIDByHash(hash, c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid hash"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hash"})
 		return
 	}
 	prizes, err := datastore.GetPrizesFromRequest(requestId, c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No prizes found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, prizes)
