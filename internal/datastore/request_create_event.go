@@ -24,6 +24,11 @@ func CreateRequestCreatedEvent(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	_, err = db.DB.NewCreateIndex().Model((*model.RequestCreatedEvent)(nil)).
+		Index("idx_request_id").Column("request_id").IfNotExists().Exec(ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -65,25 +70,13 @@ func GetTurnsRequestsOfUser(address string, limit int, offset int, c context.Con
 	return &turns, nil
 }
 
-func GetTurnByHash(hash string, c context.Context) (*model.RequestCreatedEvent, error) {
+func GetTurnByRequestId(requestId string, c context.Context) (*model.RequestCreatedEvent, error) {
 	var turn model.RequestCreatedEvent
 	err := db.DB.NewSelect().Model(&turn).
-		Where("transaction_hash = ?", hash).
+		Where("request_id = ?", requestId).
 		Scan(c)
 	if err != nil {
 		return nil, err
 	}
 	return &turn, nil
-}
-
-func GetRequestIDByHash(hash string, c context.Context) (string, error) {
-	var requestId string
-	err := db.DB.NewSelect().Model((*model.RequestCreatedEvent)(nil)).
-		Column("request_id").
-		Where("transaction_hash = ?", hash).
-		Scan(c, &requestId)
-	if err != nil {
-		return "", err
-	}
-	return requestId, nil
 }

@@ -44,9 +44,9 @@ func GetTurnsRequestsOfUser(c *gin.Context) {
 	c.JSON(http.StatusOK, turns)
 }
 
-func GetTurnRequestByHash(c *gin.Context) {
-	hash := c.Param("hash")
-	turn, err := datastore.GetTurnByHash(hash, c)
+func DetailTurnRequestByRequestId(c *gin.Context) {
+	requestId := c.Param("request-id")
+	turn, err := datastore.GetTurnByRequestId(requestId, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -55,13 +55,7 @@ func GetTurnRequestByHash(c *gin.Context) {
 }
 
 func GetPrizesOfHash(c *gin.Context) {
-	hash := c.Param("hash")
-	var requestId string
-	requestId, err := datastore.GetRequestIDByHash(hash, c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hash"})
-		return
-	}
+	requestId := c.Param("request-id")
 	prizes, err := datastore.GetPrizesFromRequest(requestId, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
