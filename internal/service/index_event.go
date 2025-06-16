@@ -288,7 +288,7 @@ func CrawlRequestCreatedInRange(pastTime context.Context, client *ethclient.Clie
 		for iter.Next() {
 			log := iter.Event
 			requestOwner := log.User
-			header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(log.Raw.BlockNumber)))
+			header, err := client.HeaderByNumber(pastTime, big.NewInt(int64(log.Raw.BlockNumber)))
 			if err != nil {
 				return err
 			}
@@ -316,7 +316,7 @@ func CrawlResponseCreatedInRange(pastTime context.Context, client *ethclient.Cli
 		for iter.Next() {
 			log := iter.Event
 			requestOwner := log.User
-			header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(log.Raw.BlockNumber)))
+			header, err := client.HeaderByNumber(pastTime, big.NewInt(int64(log.Raw.BlockNumber)))
 			if err != nil {
 				return err
 			}
