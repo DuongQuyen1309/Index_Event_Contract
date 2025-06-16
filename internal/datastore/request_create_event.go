@@ -15,7 +15,7 @@ func CreateRequestCreatedEvent(ctx context.Context) error {
 		return err
 	}
 	_, err = db.DB.NewCreateIndex().Model((*model.RequestCreatedEvent)(nil)).
-		Index("idx_transaction_hash").Column("transaction_hash").Unique().IfNotExists().Exec(ctx)
+		Index("idx_transaction_hash_log_index").Column("transaction_hash", "log_index").Unique().IfNotExists().Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func InsertResquestCreatedDB(log *token.WheelRequestCreated, requestOwner string
 		RequestOwner:    requestOwner,
 		Amount:          int(log.Amount.Int64()),
 		CreatedAt:       timestamp,
-	}).On("CONFLICT (transaction_hash) DO NOTHING").Exec(context.Background())
+	}).On("CONFLICT (transaction_hash, log_index) DO NOTHING").Exec(context.Background())
 	if err != nil {
 		return err
 	}
