@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -148,7 +149,7 @@ func WatchResponseCreatedInRealtime(realTime context.Context, realtimeConstractI
 			return realTime.Err()
 		case event, ok := <-sink:
 			if !ok {
-				err := fmt.Errorf("event channel closed in realtime watch")
+				err := fmt.Errorf("Event channel closed in realtime watch")
 				fmt.Println(err)
 				return err
 			}
@@ -181,7 +182,7 @@ func WatchRequestCreatedInRealtime(realTime context.Context, realtimeConstractIn
 			return realTime.Err()
 		case event, ok := <-sink:
 			if !ok {
-				err := fmt.Errorf("event channel closed in realtime watch")
+				err := fmt.Errorf("Event channel closed in realtime watch")
 				fmt.Println(err)
 				return err
 			}
@@ -197,9 +198,21 @@ func WatchRequestCreatedInRealtime(realTime context.Context, realtimeConstractIn
 	}
 }
 
+func GetIntValueFromEnv(envName string) (uint64, error) {
+	envNameString := os.Getenv(envName)
+	envNameInt, err := strconv.Atoi(envNameString)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(envNameInt), nil
+}
+
 func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractInstance *token.WheelFilterer, client *ethclient.Client, maxCurrentBlock uint64) error {
 	errChan := make(chan error, 2)
-	var startBlock uint64 = 20977112
+	startBlock, err := GetIntValueFromEnv("START_BLOCK")
+	if err != nil {
+		return err
+	}
 	endBlock := startBlock + 100
 	for {
 		doneChan := make(chan bool, 2)
@@ -209,7 +222,6 @@ func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractI
 		go func(startBlock uint64, endBlock uint64) {
 			defer wg.Done()
 			err := CrawlRequestCreatedInRange(pastTime, client, constractInstance, startBlock, endBlock)
-			fmt.Println("CRAWL IN RANGE", startBlock, endBlock)
 			if err != nil {
 				errChan <- err
 				fmt.Println("Error crawl request created", err)
@@ -221,7 +233,6 @@ func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractI
 		go func(startBlock uint64, endBlock uint64) {
 			defer wg.Done()
 			err := CrawlResponseCreatedInRange(pastTime, client, constractInstance, startBlock, endBlock)
-			fmt.Println("CRAWL IN RANGE", startBlock, endBlock)
 			if err != nil {
 				errChan <- err
 				fmt.Println("Error crawl response created", err)
