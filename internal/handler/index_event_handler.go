@@ -54,7 +54,7 @@ func DetailTurnRequestByRequestId(c *gin.Context) {
 	c.JSON(http.StatusOK, turn)
 }
 
-func GetPrizesOfHash(c *gin.Context) {
+func GetPrizesOfTurnRequest(c *gin.Context) {
 	requestId := c.Param("request-id")
 	prizes, err := datastore.GetPrizesFromRequest(requestId, c)
 	if err != nil {
