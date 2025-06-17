@@ -20,7 +20,7 @@ func CreateResponseCreatedEvent(ctx context.Context) error {
 		return err
 	}
 	_, err = db.DB.NewCreateIndex().Model((*model.ResponseCreatedEvent)(nil)).
-		Index("idx_response_transaction_hash").Column("transaction_hash").Unique().IfNotExists().Exec(ctx)
+		Index("idx_response_transaction_hash_log_index").Column("transaction_hash", "log_index").Unique().IfNotExists().Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func InsertResponseCreatedDB(log *token.WheelResponseCreated, prizeIds []int64, 
 		RequestId:       log.RequestId.String(),
 		PrizesId:        prizeIds,
 		CreatedAt:       timestamp,
-	}).On("CONFLICT (transaction_hash) DO NOTHING").Exec(context.Background())
+	}).On("CONFLICT (transaction_hash, log_index) DO NOTHING").Exec(context.Background())
 	if err != nil {
 		return err
 	}

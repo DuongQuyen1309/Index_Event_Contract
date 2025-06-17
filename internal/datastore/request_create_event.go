@@ -15,12 +15,17 @@ func CreateRequestCreatedEvent(ctx context.Context) error {
 		return err
 	}
 	_, err = db.DB.NewCreateIndex().Model((*model.RequestCreatedEvent)(nil)).
-		Index("idx_transaction_hash").Column("transaction_hash").Unique().IfNotExists().Exec(ctx)
+		Index("idx_transaction_hash_log_index").Column("transaction_hash", "log_index").Unique().IfNotExists().Exec(ctx)
 	if err != nil {
 		return err
 	}
 	_, err = db.DB.NewCreateIndex().Model((*model.RequestCreatedEvent)(nil)).
 		Index("idx_request_owner").Column("request_owner").IfNotExists().Exec(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = db.DB.NewCreateIndex().Model((*model.RequestCreatedEvent)(nil)).
+		Index("idx_request_id").Column("request_id").IfNotExists().Exec(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,7 +40,7 @@ func InsertResquestCreatedDB(log *token.WheelRequestCreated, requestOwner string
 		RequestOwner:    requestOwner,
 		Amount:          int(log.Amount.Int64()),
 		CreatedAt:       timestamp,
-	}).On("CONFLICT (transaction_hash) DO NOTHING").Exec(context.Background())
+	}).On("CONFLICT (transaction_hash, log_index) DO NOTHING").Exec(context.Background())
 	if err != nil {
 		return err
 	}
@@ -65,25 +70,13 @@ func GetTurnsRequestsOfUser(address string, limit int, offset int, c context.Con
 	return &turns, nil
 }
 
-func GetTurnByHash(hash string, c context.Context) (*model.RequestCreatedEvent, error) {
+func GetTurnByRequestId(requestId string, c context.Context) (*model.RequestCreatedEvent, error) {
 	var turn model.RequestCreatedEvent
 	err := db.DB.NewSelect().Model(&turn).
-		Where("transaction_hash = ?", hash).
+		Where("request_id = ?", requestId).
 		Scan(c)
 	if err != nil {
 		return nil, err
 	}
 	return &turn, nil
-}
-
-func GetRequestIDByHash(hash string, c context.Context) (string, error) {
-	var requestId string
-	err := db.DB.NewSelect().Model((*model.RequestCreatedEvent)(nil)).
-		Column("request_id").
-		Where("transaction_hash = ?", hash).
-		Scan(c, &requestId)
-	if err != nil {
-		return "", err
-	}
-	return requestId, nil
 }

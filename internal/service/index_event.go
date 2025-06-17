@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,7 +27,7 @@ func IndexEvent(ctx context.Context) error {
 	//client for crawling events in past
 	httpClient, err := ConnectBSCNode(os.Getenv("BSC_RPC_URL_HTTP"))
 	if err != nil {
-		fmt.Println("Error connect BSC node", err)
+		fmt.Println("error connect BSC node", err)
 		return err
 	}
 	maxCurrentBlockHead, err := httpClient.HeaderByNumber(ctx, nil)
@@ -37,19 +38,19 @@ func IndexEvent(ctx context.Context) error {
 	//constractInstance for crawling events in past
 	constractInstance, err := token.NewWheelFilterer(common.HexToAddress(os.Getenv("SMART_CONTRACT_ADDRESS")), httpClient)
 	if err != nil {
-		fmt.Println("Error create contract instance", err)
+		fmt.Println("error create contract instance", err)
 		return err
 	}
 	//client uses for websocket to watch events in realtime
 	wssClient, err := ConnectBSCNode(os.Getenv("BSC_RPC_URL_WSS"))
 	if err != nil {
-		fmt.Println("Error connect BSC node websocket", err)
+		fmt.Println("error connect BSC node websocket", err)
 		return err
 	}
 	//constractInstance for watching event realtime
 	realtimeConstractInstance, err := token.NewWheelFilterer(common.HexToAddress(os.Getenv("SMART_CONTRACT_ADDRESS")), wssClient)
 	if err != nil {
-		fmt.Println("Error create contract instance for realtime", err)
+		fmt.Println("error create contract instance for realtime", err)
 		return err
 	}
 
@@ -66,7 +67,7 @@ func IndexEvent(ctx context.Context) error {
 		err = CrawlInPast(pastTime, cancel, constractInstance, httpClient, maxCurrentBlock)
 		if err != nil {
 			errChan <- err
-			fmt.Println("Error crawl in past", err)
+			fmt.Println("error crawl in past", err)
 			return
 		}
 		completeChan <- true
@@ -77,7 +78,7 @@ func IndexEvent(ctx context.Context) error {
 		err = WatchEventInRealtime(realTime, cancel, realtimeConstractInstance, httpClient, wssClient, maxCurrentBlock)
 		if err != nil {
 			errChan <- err
-			fmt.Println("Error watch event in realtime", err)
+			fmt.Println("error watch event in realtime", err)
 			return
 		}
 		completeChan <- true
@@ -88,7 +89,7 @@ func IndexEvent(ctx context.Context) error {
 			cancel()
 			return generalContext.Err()
 		case err := <-errChan:
-			fmt.Println("Error in tracking event", err)
+			fmt.Println("error in tracking event", err)
 			cancel()
 			return err
 		case <-completeChan:
@@ -108,7 +109,7 @@ func WatchEventInRealtime(realTime context.Context, cancel context.CancelFunc, r
 		err := WatchRequestCreatedInRealtime(realTime, realtimeConstractInstance, client, maxCurrentBlock)
 		if err != nil {
 			errChan <- err
-			fmt.Println("Error watch request created in realtime", err)
+			fmt.Println("error watch request created in realtime", err)
 			return
 		}
 	}()
@@ -117,7 +118,7 @@ func WatchEventInRealtime(realTime context.Context, cancel context.CancelFunc, r
 		err := WatchResponseCreatedInRealtime(realTime, realtimeConstractInstance, wssClient, maxCurrentBlock)
 		if err != nil {
 			errChan <- err
-			fmt.Println("Error watch request created in realtime", err)
+			fmt.Println("error watch request created in realtime", err)
 			return
 		}
 	}()
@@ -125,7 +126,7 @@ func WatchEventInRealtime(realTime context.Context, cancel context.CancelFunc, r
 	case <-realTime.Done():
 		cancel()
 	case err := <-errChan:
-		fmt.Println("Error in watching event", err)
+		fmt.Println("error in watching event", err)
 		cancel()
 		return err
 	}
@@ -139,7 +140,7 @@ func WatchResponseCreatedInRealtime(realTime context.Context, realtimeConstractI
 		Start:   &maxCurrentBlock,
 	}, sink, nil, nil)
 	if err != nil {
-		fmt.Println("Error watch request created", err)
+		fmt.Println("error watch request created", err)
 		return err
 	}
 	for {
@@ -154,7 +155,7 @@ func WatchResponseCreatedInRealtime(realTime context.Context, realtimeConstractI
 			}
 			header, err := client.HeaderByNumber(realTime, big.NewInt(int64(event.Raw.BlockNumber)))
 			if err != nil {
-				fmt.Println("Error get header by number", err)
+				fmt.Println("error get header by number", err)
 				return err
 			}
 			timestamp := time.Unix(int64(header.Time), 0)
@@ -172,7 +173,7 @@ func WatchRequestCreatedInRealtime(realTime context.Context, realtimeConstractIn
 		Start:   &maxCurrentBlock,
 	}, sink, nil, nil)
 	if err != nil {
-		fmt.Println("Error watch request created", err)
+		fmt.Println("error watch request created", err)
 		return err
 	}
 	for {
@@ -187,7 +188,7 @@ func WatchRequestCreatedInRealtime(realTime context.Context, realtimeConstractIn
 			}
 			header, err := client.HeaderByNumber(realTime, big.NewInt(int64(event.Raw.BlockNumber)))
 			if err != nil {
-				fmt.Println("Error get header by number", err)
+				fmt.Println("error get header by number", err)
 				return err
 			}
 			timestamp := time.Unix(int64(header.Time), 0)
@@ -197,9 +198,21 @@ func WatchRequestCreatedInRealtime(realTime context.Context, realtimeConstractIn
 	}
 }
 
+func GetIntValueFromEnv(envName string) (uint64, error) {
+	envNameString := os.Getenv(envName)
+	envNameInt, err := strconv.Atoi(envNameString)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(envNameInt), nil
+}
+
 func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractInstance *token.WheelFilterer, client *ethclient.Client, maxCurrentBlock uint64) error {
 	errChan := make(chan error, 2)
-	var startBlock uint64 = 20977112
+	startBlock, err := GetIntValueFromEnv("START_BLOCK")
+	if err != nil {
+		return err
+	}
 	endBlock := startBlock + 100
 	for {
 		doneChan := make(chan bool, 2)
@@ -209,10 +222,9 @@ func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractI
 		go func(startBlock uint64, endBlock uint64) {
 			defer wg.Done()
 			err := CrawlRequestCreatedInRange(pastTime, client, constractInstance, startBlock, endBlock)
-			fmt.Println("CRAWL IN RANGE", startBlock, endBlock)
 			if err != nil {
 				errChan <- err
-				fmt.Println("Error crawl request created", err)
+				fmt.Println("error crawl request created", err)
 				return
 			}
 			doneChan <- true
@@ -221,10 +233,9 @@ func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractI
 		go func(startBlock uint64, endBlock uint64) {
 			defer wg.Done()
 			err := CrawlResponseCreatedInRange(pastTime, client, constractInstance, startBlock, endBlock)
-			fmt.Println("CRAWL IN RANGE", startBlock, endBlock)
 			if err != nil {
 				errChan <- err
-				fmt.Println("Error crawl response created", err)
+				fmt.Println("error crawl response created", err)
 				return
 			}
 			doneChan <- true
@@ -234,7 +245,7 @@ func CrawlInPast(pastTime context.Context, cancel context.CancelFunc, constractI
 			case <-pastTime.Done():
 				cancel()
 			case err := <-errChan:
-				fmt.Println("Error in watching event", err)
+				fmt.Println("error in watching event", err)
 				cancel()
 			case <-doneChan:
 				complete++
@@ -267,7 +278,7 @@ func CrawlRequestCreatedInRange(pastTime context.Context, client *ethclient.Clie
 		Context: pastTime,
 	}, nil, nil)
 	if err != nil {
-		fmt.Println("Error filter event", err)
+		fmt.Println("error filter event", err)
 		return err
 	}
 	select {
@@ -277,7 +288,7 @@ func CrawlRequestCreatedInRange(pastTime context.Context, client *ethclient.Clie
 		for iter.Next() {
 			log := iter.Event
 			requestOwner := log.User
-			header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(log.Raw.BlockNumber)))
+			header, err := client.HeaderByNumber(pastTime, big.NewInt(int64(log.Raw.BlockNumber)))
 			if err != nil {
 				return err
 			}
@@ -295,7 +306,7 @@ func CrawlResponseCreatedInRange(pastTime context.Context, client *ethclient.Cli
 		Context: pastTime,
 	}, nil, nil)
 	if err != nil {
-		fmt.Println("Error filter event", err)
+		fmt.Println("error filter event", err)
 		return err
 	}
 	select {
@@ -305,7 +316,7 @@ func CrawlResponseCreatedInRange(pastTime context.Context, client *ethclient.Cli
 		for iter.Next() {
 			log := iter.Event
 			requestOwner := log.User
-			header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(log.Raw.BlockNumber)))
+			header, err := client.HeaderByNumber(pastTime, big.NewInt(int64(log.Raw.BlockNumber)))
 			if err != nil {
 				return err
 			}
