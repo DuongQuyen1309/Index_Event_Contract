@@ -46,7 +46,8 @@ func InsertResquestCreatedDB(log *token.WheelRequestCreated, requestOwner string
 	}
 	return nil
 }
-func GetTotalTurnAmountOfUser(address string, c context.Context) (int, error) {
+
+func (dataStoreInDB *DataStoreInDB) GetTotalTurnAmountOfUser(address string, c context.Context) (int, error) {
 	var amountSum int
 	err := db.DB.NewSelect().Model((*model.RequestCreatedEvent)(nil)).
 		ColumnExpr("SUM(amount)").
@@ -58,7 +59,7 @@ func GetTotalTurnAmountOfUser(address string, c context.Context) (int, error) {
 	return amountSum, nil
 }
 
-func GetTurnsRequestsOfUser(address string, limit int, offset int, c context.Context) (*[]model.RequestCreatedEvent, error) {
+func (dataStoreInDB *DataStoreInDB) GetTurnsRequestsOfUser(address string, limit int, offset int, c context.Context) (*[]model.RequestCreatedEvent, error) {
 	var turns []model.RequestCreatedEvent
 	err := db.DB.NewSelect().Model(&turns).
 		Where("request_owner = ?", address).
@@ -70,7 +71,7 @@ func GetTurnsRequestsOfUser(address string, limit int, offset int, c context.Con
 	return &turns, nil
 }
 
-func GetTurnByRequestId(requestId string, c context.Context) (*model.RequestCreatedEvent, error) {
+func (dataStoreInDB *DataStoreInDB) GetTurnByRequestId(requestId string, c context.Context) (*model.RequestCreatedEvent, error) {
 	var turn model.RequestCreatedEvent
 	err := db.DB.NewSelect().Model(&turn).
 		Where("request_id = ?", requestId).

@@ -9,17 +9,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetTotalTurnAmountOfUser(c *gin.Context) {
+// type Config struct {
+// 	R              *gin.Engine
+// 	EventDatastore model.EventDatastore
+// }
+
+//	func NewHandler(c *Config) {
+//		h := &Handler{
+//			EventDatastore: c.EventDatastore,
+//		}
+//		g := c.R.Group("/api/v1")
+//		g.GET("/user/:address/turn-amount", h.GetTotalTurnAmountOfUser)
+//		g.GET("/user/:address/turn-requests", h.GetTurnsRequestsOfUser)
+//		g.GET("/turn-request/:request-id", h.DetailTurnRequestByRequestId)
+//		g.GET("/turn-request/:request-id/prizes", h.GetPrizesOfTurnRequest)
+//	}
+type Handler struct {
+	EventDatastore datastore.Datastore
+}
+
+func (h *Handler) GetTotalTurnAmountOfUser(c *gin.Context) {
 	userAddress := c.Param("address")
-	amountSum, err := datastore.GetTotalTurnAmountOfUser(userAddress, c)
+	amountSum, err := h.EventDatastore.GetTotalTurnAmountOfUser(userAddress, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"amount": amountSum, "address": userAddress})
+	c.JSON(http.StatusOK, gin.H{"amount": amountSum})
 }
-
-func GetTurnsRequestsOfUser(c *gin.Context) {
+func (h *Handler) GetTurnsRequestsOfUser(c *gin.Context) {
 	userAddress := c.Param("address")
 	page, err := strconv.Atoi(c.Query("page"))
 	if err != nil {
@@ -36,7 +54,7 @@ func GetTurnsRequestsOfUser(c *gin.Context) {
 		return
 	}
 	offset := (page - 1) * limit
-	turns, err := datastore.GetTurnsRequestsOfUser(userAddress, limit, offset, c)
+	turns, err := h.EventDatastore.GetTurnsRequestsOfUser(userAddress, limit, offset, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -44,9 +62,9 @@ func GetTurnsRequestsOfUser(c *gin.Context) {
 	c.JSON(http.StatusOK, turns)
 }
 
-func DetailTurnRequestByRequestId(c *gin.Context) {
+func (h *Handler) DetailTurnRequestByRequestId(c *gin.Context) {
 	requestId := c.Param("request-id")
-	turn, err := datastore.GetTurnByRequestId(requestId, c)
+	turn, err := h.EventDatastore.GetTurnByRequestId(requestId, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,9 +72,9 @@ func DetailTurnRequestByRequestId(c *gin.Context) {
 	c.JSON(http.StatusOK, turn)
 }
 
-func GetPrizesOfTurnRequest(c *gin.Context) {
+func (h *Handler) GetPrizesOfTurnRequest(c *gin.Context) {
 	requestId := c.Param("request-id")
-	prizes, err := datastore.GetPrizesFromRequest(requestId, c)
+	prizes, err := h.EventDatastore.GetPrizesFromRequest(requestId, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
